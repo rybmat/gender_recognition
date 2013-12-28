@@ -15,9 +15,9 @@ def makePlots(samples):
     for s in samples:
         print "processing " + s['name']
         w = s['sampleRate']
-        T = 1
+        T = 2
 
-        n = T * w
+        n = len(s['signal'])
             
         signal = s['signal'][0:n]             # funkcja sprobkowana
 
@@ -133,6 +133,6 @@ def launchAlgorithm(samoles, counters):
 if __name__ == '__main__':
     samples, counters = loadFiles("train")
     #print samples
-    #print counters
-    #makePlots(samples)
-    launchAlgorithm(samples, counters)
+    print counters
+    makePlots(samples)
+    #launchAlgorithm(samples, counters)
