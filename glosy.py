@@ -27,9 +27,10 @@ def makePlots(samples):
 
         print "......plot"
         freqs = linspace(0, w, n, endpoint=False)
-        plot(freqs, signal1, '-')
+        plot(freqs[:int(len(freqs)/2)], signal1[:int(len(freqs)/2)], '-')
         xlabel("czestotliwosc probkowania")
         ylabel("liczba probek/stala")
+        xscale('linear', rotation=45)
        
         print "...saveFig"
         savefig("plots/" + s['name'] + ".pdf")
@@ -100,8 +101,38 @@ def recognizeGender(sample):
     """
     pass
 
+def launchAlgorithm(samoles, counters):
+    recognizedMale = 0
+    recognizedFemale = 0
+    wellRecognized = 0
+
+    print "Launching algorithm..."
+    for s in samples:
+        gender = recognizeGender(s)
+
+        if gender == s['nameGender']:
+            wellRecognized += 1
+            
+            if gender == "M":
+                recognizedMale += 1
+            elif gender == "K":
+                recognizedFemale += 1
+            else:
+                print "...algorithm returned wrong value: ", s['name']
+            
+            print "...", s['name'], "...ok!"
+        else:
+            print "...", s['name'], "...not so good"
+
+    samplesCount = counters['maleCount'] + counters['femaleCount']
+    print "\nStatistics..."
+    print "...Well recognized Male: ", recognizedMale, "/", counters['maleCount']
+    print "...Well recognized Female: ", recognizedFemale, "/", counters['femaleCount']
+    print "...Total: ", wellRecognized, "/", samplesCount, " (", wellRecognized/samplesCount*100, "%)"
+
 if __name__ == '__main__':
     samples, counters = loadFiles("train")
     #print samples
-    print counters
-    makePlots(samples)
+    #print counters
+    #makePlots(samples)
+    launchAlgorithm(samples, counters)
