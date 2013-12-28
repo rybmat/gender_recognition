@@ -93,13 +93,31 @@ def loadFiles(path):
     return samples, counters
 
 def recognizeGender(sample):
-    """This function recognizes the sex of person who is speaking
+    #This function recognizes the sex of person who is speaking
         
-        argument: single sample from dictionary that is returned by loadFiles
+       # argument: single sample from dictionary that is returned by loadFiles
         
-        returns: string - 'M' i a man is speaking, 'K' if a woman is speaking
-    """
-    pass
+       # returns: string - 'M' i a man is speaking, 'K' if a woman is speaking
+	t=1
+	w=sample['sampleRate']
+	n=t*w
+	freqs=linspace(0,w,n,endpoint=False)
+	signal=fft(sample['signal'][0:n])
+	signal=abs(signal)
+	for i,j in zip(range(n),freqs):
+		if j>255 or j<85:
+			signal[i]=0
+	rate=max(signal)
+	index=0
+	for i in range(n):
+		if signal[i]==rate:
+			index=i		
+			break
+	avg_freq=freqs[index]
+	if avg_freq<=165:
+		return 'M'
+	else:
+		return 'K'
 
 def launchAlgorithm(samoles, counters):
     recognizedMale = 0
@@ -134,5 +152,5 @@ if __name__ == '__main__':
     samples, counters = loadFiles("train")
     #print samples
     print counters
-    makePlots(samples)
-    #launchAlgorithm(samples, counters)
+    #makePlots(samples)
+    launchAlgorithm(samples, counters)
