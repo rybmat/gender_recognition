@@ -98,23 +98,27 @@ def recognizeGender(sample):
        # argument: single sample from dictionary that is returned by loadFiles
         
        # returns: string - 'M' i a man is speaking, 'K' if a woman is speaking
-	t=1
 	w=sample['sampleRate']
-	n=t*w
+	t=3
+	n=w*t
 	freqs=linspace(0,w,n,endpoint=False)
-	signal=fft(sample['signal'][0:n])
-	signal=abs(signal)
+	signal=sample['signal']
+	nframe=len(signal)
+	if nframe<n:
+		n=nframe
+	spectrum=fft(signal[0:n])
+	spectrum=abs(spectrum)
 	for i,j in zip(range(n),freqs):
-		if j>255 or j<85:
-			signal[i]=0
-	rate=max(signal)
-	index=0
+		if j>300 or j<30:
+			spectrum[i]=0
+	male=0
+	female=0
 	for i in range(n):
-		if signal[i]==rate:
-			index=i		
-			break
-	avg_freq=freqs[index]
-	if avg_freq<=165:
+		if freqs[i]<=165:
+			male+=2*spectrum[i]/n
+		else:
+			female+=2*spectrum[i]/n	
+	if male>female:
 		return 'M'
 	else:
 		return 'K'
@@ -149,8 +153,7 @@ def launchAlgorithm(samoles, counters):
     print "...Total: ", wellRecognized, "/", samplesCount, " (", wellRecognized/samplesCount*100, "%)"
 
 if __name__ == '__main__':
-    samples, counters = loadFiles("train")
-    #print samples
-    print counters
+	samples, counters = loadFiles("train")
+    #print counters
     #makePlots(samples)
-    launchAlgorithm(samples, counters)
+	launchAlgorithm(samples, counters)
