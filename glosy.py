@@ -58,7 +58,11 @@ def loadFiles(path):
 
         print "...", f
         with open(p, "rb") as wavFile:
-            wavFile.read(24)
+            wavFile.read(22)
+
+            chanelsNum = wavFile.read(2)
+            chanelsNum = struct.unpack("<h",chanelsNum)[0]
+            print "......chanels: ", chanelsNum
             
             rate = wavFile.read(4)
             rate = struct.unpack("<i",rate)[0]
@@ -80,6 +84,9 @@ def loadFiles(path):
                 b = struct.unpack("<h", b)
                 sig.append(b[0])
                 b = wavFile.read(int(sampleSize))
+
+            if sampleSize > 1:
+                sig = [s for i, s in enumerate(sig) if i % sampleSize == 1]
             
             
         samples.append({'name': f, 'nameGender': f[-5:-4], 'signal': sig, 'sampleRate': rate})
@@ -100,12 +107,12 @@ def recognizeGender(sample):
        # returns: string - 'M' i a man is speaking, 'K' if a woman is speaking
 	t=1
 	w=sample['sampleRate']
-	n=t*w
+	n=len(sample['signal'])  #t*w
 	freqs=linspace(0,w,n,endpoint=False)
 	signal=fft(sample['signal'][0:n])
 	signal=abs(signal)
 	for i,j in zip(range(n),freqs):
-		if j>255 or j<85:
+		if j>192 or j<65:
 			signal[i]=0
 	rate=max(signal)
 	index=0
@@ -114,12 +121,12 @@ def recognizeGender(sample):
 			index=i		
 			break
 	avg_freq=freqs[index]
-	if avg_freq<=165:
+	if avg_freq<=161:
 		return 'M'
 	else:
 		return 'K'
 
-def launchAlgorithm(samoles, counters):
+def launchAlgorithm(samples, counters):
     recognizedMale = 0
     recognizedFemale = 0
     wellRecognized = 0
