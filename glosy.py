@@ -6,98 +6,69 @@ from numpy import *
 from scipy import *
 from os import listdir
 from os.path import isfile, join, splitext
+from scikits.audiolab import wavread
 
 def makePlots(samples):
-    '''makes plots for a collection of samples
-        argument: dictionary returned by loadFiles
-    '''
-    print "drowing plots..."
-    for s in samples:
-        print "processing " + s['name']
-        w = s['sampleRate']
-        T = 2
+	'''makes plots for a collection of samples
+	argument: dictionary returned by loadFiles
+	'''
+	print "drowing plots..."
+	for s in samples:
+		print "processing " + s['name']
+		w = s['sampleRate']
+		T = 20
 
-        n = len(s['signal'])
+		n = len(s['signal'])
             
-        signal = s['signal'][0:n]             # funkcja sprobkowana
+		signal = s['signal'][0:n]             # funkcja sprobkowana
 
-        print "......fft"
-        signal1 = fft(signal)      
-        signal1 = abs(signal1)        
+		print "......fft"
+		signal1 = fft(signal)      
+		signal1 = abs(signal1)        
 
-        print "......plot"
-        freqs = linspace(0, w, n, endpoint=False)
-        plot(freqs[:int(len(freqs)/2)], signal1[:int(len(freqs)/2)], '-')
-        xlabel("czestotliwosc probkowania")
-        ylabel("liczba probek/stala")
-        xscale('linear', rotation=45)
+		print "......plot"
+		freqs = linspace(0, w, n, endpoint=False)
+		plot(freqs[:int(len(freqs)/2)], signal1[:int(len(freqs)/2)], '-')
+		xlabel("czestotliwosc probkowania")
+		ylabel("liczba probek/stala")
+		xscale('linear', rotation=45)
        
-        print "...saveFig"
-        savefig("plots/" + s['name'] + ".pdf")
+		print "...saveFig"
+		savefig("plots/" + s['name'] + ".pdf")
     
 
 
 def loadFiles(path):
-    """reads wave files from path and returns dictionary with fields:
+	"""reads wave files from path and returns dictionary with fields:
         - "name" - name of file
         - "nameGender" - a sex readed from filename
         - "signal" - numpy array with sound signal readed from file
         - "sampleRate" - sample rate of the file
 
         and dictionary that contains numbers of male and female voices
-    """
-    print "reading files..."
+	"""
+	print "reading files..."
 
-    files = [ f for f in listdir(path) if isfile(join(path,f)) and splitext(f)[1] == ".wav" ]
+	files = [ f for f in listdir(path) if isfile(join(path,f)) and splitext(f)[1] == ".wav" ]
 
-    samples = []
-    maleCount = 0
-    femaleCount = 0
-    for f in files:
-        p = path + '/' + f
+	samples = []
+	maleCount = 0
+	femaleCount = 0
+	for f in files:
+		p = path + '/' + f
 
-        print "...", f
-        with open(p, "rb") as wavFile:
-            wavFile.read(22)
-
-            chanelsNum = wavFile.read(2)
-            chanelsNum = struct.unpack("<h",chanelsNum)[0]
-            print "......chanels: ", chanelsNum
-            
-            rate = wavFile.read(4)
-            rate = struct.unpack("<i",rate)[0]
-            print "......rate: ", rate
-            
-            wavFile.read(6)
-            
-            bps = wavFile.read(2)
-            bps = struct.unpack("<h",bps)[0]
-            print "......bps: ", bps
-
-            wavFile.read(8)
-            
-            print "......reading data"
-            sig = []
-            sampleSize = bps/8
-            b = wavFile.read(int(sampleSize))
-            while b != "":
-                b = struct.unpack("<h", b)
-                sig.append(b[0])
-                b = wavFile.read(int(sampleSize))
-
-            if sampleSize > 1:
-                sig = [s for i, s in enumerate(sig) if i % sampleSize == 1]
-            
-            
-        samples.append({'name': f, 'nameGender': f[-5:-4], 'signal': sig, 'sampleRate': rate})
+		print "...", f
+		data,rate,encoding=wavread(p)
+		sig=[mean(d) for d in data]    
+		samples.append({'name': f, 'nameGender': f[-5:-4], 'signal': sig, 'sampleRate': rate})
         
-        if f[-5:-4] == "M":
-            maleCount += 1
-        else:
-            femaleCount += 1
+		if f[-5:-4] == "M":
+			maleCount += 1
+		else:
+			femaleCount += 1
     
-    counters = {"maleCount":maleCount, "femaleCount":femaleCount}
-    return samples, counters
+	counters = {"maleCount":maleCount, "femaleCount":femaleCount}
+	return samples, counters
 
 def recognizeGender(sample):
     #This function recognizes the sex of person who is speaking
@@ -105,23 +76,24 @@ def recognizeGender(sample):
        # argument: single sample from dictionary that is returned by loadFiles
         
        # returns: string - 'M' i a man is speaking, 'K' if a woman is speaking
-	t=1
+	t=3
 	w=sample['sampleRate']
-	n=len(sample['signal'])  #t*w
-	freqs=linspace(0,w,n,endpoint=False)
-	signal=fft(sample['signal'][0:n])
-	signal=abs(signal)
-	for i,j in zip(range(n),freqs):
-		if j>192 or j<65:
-			signal[i]=0
-	rate=max(signal)
-	index=0
-	for i in range(n):
-		if signal[i]==rate:
-			index=i		
-			break
-	avg_freq=freqs[index]
-	if avg_freq<=161:
+	n=w*t  #t*w
+	signal=sample['signal']
+	nframe=len(signal)
+	if n>nframe:
+			n=nframe
+	frequency=linspace(0,w,n)
+	spectrum=fft(signal[0:n])
+	spectrum=abs(spectrum)
+	amp,freq=[],[]
+	for i in range(len(frequency)):
+		if 85 < frequency[i] < 255:
+			freq.append(frequency[i])
+			amp.append(spectrum[i]) 
+	index=amp.index(max(amp))
+	avg_freq=freq[index]
+	if avg_freq<175:
 		return 'M'
 	else:
 		return 'K'
@@ -156,8 +128,8 @@ def launchAlgorithm(samples, counters):
     print "...Total: ", wellRecognized, "/", samplesCount, " (", wellRecognized/samplesCount*100, "%)"
 
 if __name__ == '__main__':
-    samples, counters = loadFiles("train")
+	samples, counters = loadFiles("train")
     #print samples
-    print counters
+	print counters
     #makePlots(samples)
-    launchAlgorithm(samples, counters)
+	launchAlgorithm(samples, counters)
